@@ -3,6 +3,7 @@ import { cache } from "react";
 import { z } from "zod";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { RevealPayload } from "@/lib/types";
+import { isSyntheticEvent } from "@/lib/demo";
 
 const number = z.number().finite();
 const rank = number.nullable();
@@ -46,7 +47,7 @@ export type PublicReveal = Omit<RevealPayload, "actual" | "brandActual" | "brand
 };
 
 export interface PublicResult {
-  event: { slug: string; name: string; location: string | null };
+  event: { slug: string; name: string; location: string | null; synthetic?: boolean };
   reveal: PublicReveal;
 }
 
@@ -55,7 +56,7 @@ export const readPublishedReveal = cache(async (slug: string): Promise<PublicRes
 
   const { data, error } = await supabaseAdmin()
     .from("events")
-    .select("slug, name, location, reveal")
+    .select("slug, name, location, reveal, settings")
     .eq("slug", slug)
     .in("status", ["revealed", "closed"])
     .not("reveal", "is", null)
@@ -66,7 +67,7 @@ export const readPublishedReveal = cache(async (slug: string): Promise<PublicRes
   const parsed = publicRevealSchema.safeParse(data.reveal);
   if (!parsed.success) return null;
   return {
-    event: { slug: data.slug, name: data.name, location: data.location },
+    event: { slug: data.slug, name: data.name, location: data.location, synthetic: isSyntheticEvent(data) },
     reveal: parsed.data,
   };
 });

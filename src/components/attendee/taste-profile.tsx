@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { EventStatus } from "@/lib/types";
+import { isSyntheticEvent, SYNTHETIC_DISCLOSURE } from "@/lib/demo";
 
 type Profile = {
   archetype: string;
@@ -18,7 +19,8 @@ type MyShelf = {
   profile: Profile | null;
 };
 
-export function TasteProfile({ slug, eventName }: { slug: string; eventName: string }) {
+export function TasteProfile({ slug, eventName, synthetic = false }: { slug: string; eventName: string; synthetic?: boolean }) {
+  const demo = isSyntheticEvent({ name: eventName, synthetic });
   const [data, setData] = useState<MyShelf | null>(null);
   const [missingVoter, setMissingVoter] = useState(false);
   const [error, setError] = useState("");
@@ -57,6 +59,7 @@ export function TasteProfile({ slug, eventName }: { slug: string; eventName: str
           <Link href={`/e/${encodeURIComponent(slug)}/v`} className="inline-flex min-h-11 items-center font-semibold text-slate-700 hover:underline focus-visible:outline-2 focus-visible:outline-emerald-600">← My tasting</Link>
           <Link href={`/e/${encodeURIComponent(slug)}`} className="inline-flex min-h-11 items-center rounded-xl border border-slate-300 px-4 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-emerald-600">{eventName}</Link>
         </nav>
+        {demo && <aside role="note" aria-label="Synthetic demo disclosure" className="mt-6 rounded-2xl border-2 border-amber-400 bg-amber-50 p-4 text-sm leading-relaxed text-amber-950"><strong className="block font-semibold">SYNTHETIC / DEMO · Demo/test event</strong><p className="mt-1">{SYNTHETIC_DISCLOSURE}</p></aside>}
         <header className="mt-10"><p className="text-xs font-bold uppercase tracking-widest text-emerald-700">Your shelf · {eventName}</p><h1 className="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">Your taste profile.</h1><p className="mt-3 text-slate-600">Your own ratings shape what to try next. Deeper taste signals unlock when the room reveals its results.</p></header>
         {!data && !missingVoter && !error && <p role="status" className="mt-8 text-slate-600">Building your shelf…</p>}
         {error && <div role="alert" className="mt-8 rounded-2xl border border-red-200 bg-red-50 p-5 text-red-800"><p>{error}</p><button type="button" onClick={() => window.location.reload()} className="mt-3 min-h-11 rounded-lg border border-red-300 px-4 font-semibold">Try again</button></div>}

@@ -6,6 +6,7 @@ import { EventPulse } from "@/components/attendee/event-pulse";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { siteUrl } from "@/lib/site-url";
 import type { EventRow } from "@/lib/types";
+import { isSyntheticEvent } from "@/lib/demo";
 
 export const dynamic = "force-dynamic";
 
@@ -18,12 +19,12 @@ export default async function EventLanding({ params }: Props) {
   const db = supabaseAdmin();
   const { data, error } = await db
     .from("events")
-    .select("id,slug,name,location,status,locked_at,lock_hash")
+    .select("id,slug,name,location,status,locked_at,lock_hash,settings")
     .eq("slug", slug)
     .maybeSingle();
   if (error) throw new Error("Unable to load event");
   if (!data) notFound();
-  const event = data as Pick<EventRow, "id" | "slug" | "name" | "location" | "status" | "locked_at" | "lock_hash">;
+  const event = data as Pick<EventRow, "id" | "slug" | "name" | "location" | "status" | "locked_at" | "lock_hash" | "settings">;
   const { count, error: countError } = await db
     .from("votes")
     .select("id", { count: "exact", head: true })
@@ -53,6 +54,7 @@ export default async function EventLanding({ params }: Props) {
               status: event.status,
               lockedAt: event.locked_at,
               lockHash: event.lock_hash,
+              synthetic: isSyntheticEvent(event),
             },
             voteCount: count ?? 0,
           }} />

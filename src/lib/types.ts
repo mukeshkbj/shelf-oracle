@@ -25,7 +25,7 @@ export interface EventRow {
   name: string;
   location: string | null;
   status: EventStatus;
-  settings: { principles?: { key: string; label: string; weight: number }[] };
+  settings: { synthetic?: boolean; principles?: { key: string; label: string; weight: number }[] };
   settings_version: number;
   products_version: number;
   draft: PredictionPayload | null;

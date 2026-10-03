@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { ForbiddenError, getUser, requireEventMemberBySlug } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { siteUrl } from "@/lib/site-url";
 import type { EventRow, Product } from "@/lib/types";
 import { EventStudio } from "@/components/organizer/EventStudio";
 
@@ -32,5 +33,6 @@ export default async function EventPage({ params }: PageProps<"/app/e/[slug]">) 
     loadVoters(),
   ]);
   if (productsResult.error || votesResult.error || guessesResult.error || photosResult.error || commentsResult.error) throw new Error("Could not load this event. Please try again.");
-  return <EventStudio event={event} initialProducts={(productsResult.data || []) as Product[]} imageCount={photosResult.count || 0} monitor={{ voteCount: votesResult.count || 0, voterCount: voters.size, guessCount: guessesResult.count || 0, comments: (commentsResult.data || []).filter(v => v.comment).map(v => ({ text: v.comment as string, rating: v.rating, productId: v.product_id, createdAt: v.created_at })) }} />;
+  const votingUrl = siteUrl(`/e/${encodeURIComponent(event.slug)}/v`);
+  return <EventStudio event={event} votingUrl={votingUrl} initialProducts={(productsResult.data || []) as Product[]} imageCount={photosResult.count || 0} monitor={{ voteCount: votesResult.count || 0, voterCount: voters.size, guessCount: guessesResult.count || 0, comments: (commentsResult.data || []).filter(v => v.comment).map(v => ({ text: v.comment as string, rating: v.rating, productId: v.product_id, createdAt: v.created_at })) }} />;
 }

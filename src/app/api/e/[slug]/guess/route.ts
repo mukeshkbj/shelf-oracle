@@ -33,6 +33,15 @@ export async function POST(req: Request, { params }: Ctx) {
     return NextResponse.json({ error: "Voting is not open" }, { status: 409 });
   }
 
+  const { data: existingGuess, error: guessError } = await db
+    .from("human_predictions")
+    .select("id")
+    .eq("event_id", event.id)
+    .eq("voter_id", parsed.data.voterId)
+    .maybeSingle();
+  if (guessError) return NextResponse.json({ error: "Unable to check guess" }, { status: 500 });
+  if (existingGuess) return NextResponse.json({ guessSubmitted: true, alreadyLocked: true });
+
   const { data: existingVotes, error: votesError } = await db
     .from("votes")
     .select("id")
@@ -61,7 +70,7 @@ export async function POST(req: Request, { params }: Ctx) {
     top5: parsed.data.top5,
   });
   if (error?.code === "23505") {
-    return NextResponse.json({ error: "Your guess is already locked" }, { status: 409 });
+    return NextResponse.json({ guessSubmitted: true, alreadyLocked: true });
   }
   if (error) return NextResponse.json({ error: "Unable to save guess" }, { status: 500 });
   return NextResponse.json({ guessSubmitted: true }, { status: 201, headers: { "Cache-Control": "no-store" } });

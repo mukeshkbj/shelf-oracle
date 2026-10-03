@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { isSyntheticEvent, SYNTHETIC_DISCLOSURE, SYNTHETIC_PROOF_DISCLOSURE } from "@/lib/demo";
 import { useEffect, useState } from "react";
 import type { PublicResult } from "./public-reveal";
 import { AttributionChart, RankChart } from "./charts";
@@ -8,6 +9,7 @@ import { byRoomRank, formatCorrelation, formatDate, formatMean, formatPValue, fo
 
 export default function RevealDeck({ result, initialAutoplay, fixture = false }: { result: PublicResult; initialAutoplay: boolean; fixture?: boolean }) {
   const { event, reveal } = result;
+  const synthetic = fixture || isSyntheticEvent(event);
   const reportHref = fixture ? `/fixtures/${event.slug}` : `/e/${event.slug}/report`;
   const ranked = byRoomRank(reveal);
   const winner = ranked.find((item) => item.room && item.room.votes > 0 && item.room.rank === 1);
@@ -20,12 +22,12 @@ export default function RevealDeck({ result, initialAutoplay, fixture = false }:
   const slides = [
     {
       label: "The room",
-      heading: "The shelf made a claim. The room answered.",
+      heading: synthetic ? "A simulated room. A demo result." : "The shelf made a claim. The room answered.",
       body: <div className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
         <div>
-          <p className="mb-5 font-mono text-xs uppercase tracking-[0.3em] text-emerald-300">{fixture ? "Synthetic local preview" : "Live tasting / published result"}</p>
-          <h2 className="max-w-5xl text-5xl font-semibold leading-[1.03] tracking-tight sm:text-7xl xl:text-8xl">The shelf made a claim.<br /><span className="text-emerald-400">The room answered.</span></h2>
-          <p className="mt-8 max-w-2xl text-base text-slate-300 sm:text-xl">{event.name}{event.location ? ` · ${event.location}` : ""}. An AI prediction was locked before people tasted the products. This is what the room actually rated.</p>
+          <p className="mb-5 font-mono text-xs uppercase tracking-[0.3em] text-emerald-300">{fixture ? "Synthetic local preview" : synthetic ? "SYNTHETIC / DEMO result" : "Live tasting / published result"}</p>
+          <h2 className="max-w-5xl text-5xl font-semibold leading-[1.03] tracking-tight sm:text-7xl xl:text-8xl">{synthetic ? <>A simulated room.<br /><span className="text-emerald-400">A demo result.</span></> : <>The shelf made a claim.<br /><span className="text-emerald-400">The room answered.</span></>}</h2>
+          <p className="mt-8 max-w-2xl text-base text-slate-300 sm:text-xl">{event.name}{event.location ? ` · ${event.location}` : ""}. {synthetic ? "A demo prediction compared with simulated ratings and guesses. This is not a record of real shopper demand." : "An AI prediction was locked before people tasted the products. This is what the room actually rated."}</p>
         </div>
         <div className="grid grid-cols-3 gap-2 border-t border-white/15 pt-5 lg:grid-cols-1 lg:gap-6 lg:border-l lg:border-t-0 lg:pl-8">
           {[[reveal.voterCount, "voters"], [reveal.voteCount, "ratings"], [votedProducts, "tasted products"]].map(([value, label]) => <div key={label} className="min-w-0"><span className="block font-mono text-3xl tabular-nums text-white sm:text-6xl">{value}</span><span className="block text-xs uppercase tracking-wide text-slate-300 sm:text-sm">{label}</span></div>)}
@@ -34,18 +36,18 @@ export default function RevealDeck({ result, initialAutoplay, fixture = false }:
     },
     {
       label: "The lock",
-      heading: "First, the prediction was sealed.",
+      heading: synthetic ? "Reconstructed demo proof." : "First, the prediction was sealed.",
       body: <div className="grid gap-8 lg:grid-cols-[1fr_1fr] lg:items-center">
         <div>
           <p className="font-mono text-xs uppercase tracking-widest text-amber-300">01 / The proof</p>
-          <h2 className="mt-5 text-4xl font-semibold tracking-tight sm:text-6xl">First, the prediction <span className="text-amber-300">was sealed.</span></h2>
-          <p className="mt-6 max-w-xl text-base leading-relaxed text-slate-300 sm:text-xl">A fingerprint of the locked AI prediction was recorded before voting. The reveal builder compared the locked prediction with that fingerprint.</p>
+          <h2 className="mt-5 text-4xl font-semibold tracking-tight sm:text-6xl">{synthetic ? <>Reconstructed <span className="text-amber-300">demo proof.</span></> : <>First, the prediction <span className="text-amber-300">was sealed.</span></>}</h2>
+          <p className="mt-6 max-w-xl text-base leading-relaxed text-slate-300 sm:text-xl">{synthetic ? SYNTHETIC_PROOF_DISCLOSURE : "A fingerprint of the locked AI prediction was recorded before voting. The reveal builder compared the locked prediction with that fingerprint."}</p>
         </div>
         <div className="rounded-3xl border border-amber-300/30 bg-amber-300/5 p-5 sm:p-10">
           <p className="font-mono text-xs uppercase tracking-widest text-amber-200">SHA-256 / locked prediction</p>
           <p className="mt-7 break-all font-mono text-2xl tracking-wide text-white sm:text-4xl">{reveal.lockHash ? `${reveal.lockHash.slice(0, 12)}…` : "Fingerprint unavailable"}</p>
           <p className="mt-3 text-sm text-slate-300">{reveal.lockHash ? "First 12 characters of the recorded hash" : "No hash included in this public result"}</p>
-          <p className={`mt-8 border-t border-white/15 pt-5 text-lg font-medium ${reveal.verified && reveal.lockHash ? "text-emerald-300" : "text-amber-200"}`}>{reveal.verified && reveal.lockHash ? "Locked prediction matched at reveal" : "Hash verification not confirmed"}</p>
+          <p className={`mt-8 border-t border-white/15 pt-5 text-lg font-medium ${reveal.verified && reveal.lockHash ? "text-emerald-300" : "text-amber-200"}`}>{reveal.verified && reveal.lockHash ? synthetic ? "Demo payload hash matched" : "Locked prediction matched at reveal" : "Hash verification not confirmed"}</p>
           <p className="mt-2 text-sm leading-relaxed text-slate-300">The public report download includes the canonical locked payload for independent SHA-256 verification against this fingerprint.</p>
         </div>
       </div>,
@@ -69,10 +71,10 @@ export default function RevealDeck({ result, initialAutoplay, fixture = false }:
     },
     {
       label: "Rank shift",
-      heading: "AI, human consensus, actual tasting.",
+      heading: synthetic ? "Demo prediction, simulated consensus and ratings." : "AI, human consensus, actual tasting.",
       body: <div>
         <p className="font-mono text-xs uppercase tracking-widest text-violet-300">03 / The rank shift</p>
-        <h2 className="mt-3 mb-6 text-3xl font-semibold tracking-tight sm:text-5xl"><span className="text-violet-300">AI</span> → human consensus → <span className="text-emerald-400">actual tasting.</span></h2>
+        <h2 className="mt-3 mb-6 text-3xl font-semibold tracking-tight sm:text-5xl"><span className="text-violet-300">AI</span> → human consensus → <span className="text-emerald-400">{synthetic ? "simulated ratings." : "actual tasting."}</span></h2>
         <RankChart reveal={reveal} />
       </div>,
     },
@@ -131,12 +133,12 @@ export default function RevealDeck({ result, initialAutoplay, fixture = false }:
     },
     {
       label: "Room voices",
-      heading: "In the room's own words.",
+      heading: synthetic ? "Simulated demo comments." : "In the room's own words.",
       body: <div>
-        <p className="font-mono text-xs uppercase tracking-widest text-emerald-300">08 / Actual written feedback</p>
-        <h2 className="mt-3 text-4xl font-semibold tracking-tight sm:text-6xl">In the room&apos;s <span className="text-emerald-400">own words.</span></h2>
+        <p className="font-mono text-xs uppercase tracking-widest text-emerald-300">08 / {synthetic ? "Simulated written feedback" : "Actual written feedback"}</p>
+        <h2 className="mt-3 text-4xl font-semibold tracking-tight sm:text-6xl">{synthetic ? <>Simulated <span className="text-emerald-400">demo comments.</span></> : <>In the room&apos;s <span className="text-emerald-400">own words.</span></>}</h2>
         {reveal.comments.length ? <div className="mt-8 grid gap-4 md:grid-cols-2">{reveal.comments.slice(0, 4).map((entry, i) => <figure key={`${entry.product}-${i}`} className="rounded-2xl border border-white/15 p-5 sm:p-8"><blockquote className="break-words text-lg leading-relaxed sm:text-2xl">“{entry.text}”</blockquote><figcaption className="mt-5 break-words text-sm text-slate-300">{entry.brand} · {entry.product} · {entry.rating}/5 submitted rating</figcaption></figure>)}</div> : <p className="mt-8 text-slate-300">No written tasting comments were shared for this event.</p>}
-        <p className="mt-6 text-sm text-slate-300">Direct excerpts from submitted comments; not generated testimonials.</p>
+        <p className="mt-6 text-sm text-slate-300">{synthetic ? "Simulated demo comments, not authentic customer testimonials or evidence of retail demand." : "Direct excerpts from submitted comments; not generated testimonials."}</p>
       </div>,
     },
     {
@@ -146,7 +148,7 @@ export default function RevealDeck({ result, initialAutoplay, fixture = false }:
         <div>
           <p className="font-mono text-xs uppercase tracking-widest text-emerald-300">09 / After the room clears</p>
           <h2 className="mt-4 text-4xl font-semibold tracking-tight sm:text-6xl">One event. <span className="text-emerald-400">A record worth keeping.</span></h2>
-          <p className="mt-6 max-w-2xl text-lg text-slate-300">The shareable report preserves the rankings, votes, methodology, quotes and the AI&apos;s misses. A repeatable panel is a better starting point for the next shelf decision.</p>
+          <p className="mt-6 max-w-2xl text-lg text-slate-300">{synthetic ? "The shareable demo report illustrates rankings, simulated votes and comments, and methodology. It must not be used as evidence for retail decisions." : "The shareable report preserves the rankings, votes, methodology, quotes and the AI's misses. A repeatable panel is a better starting point for the next shelf decision."}</p>
           <Link href={reportHref} className="mt-8 inline-flex min-h-12 items-center justify-center rounded-full bg-emerald-400 px-7 py-3 text-sm font-semibold text-slate-950 hover:bg-emerald-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400">Open the public report <span aria-hidden="true" className="ml-2">↗</span></Link>
         </div>
         <aside className="rounded-2xl border border-white/15 p-6 text-sm leading-relaxed text-slate-300"><h3 className="text-lg font-medium text-white">What this doesn&apos;t prove</h3><p className="mt-3">One self-selected room is not a representative market sample. Correlations are not causes, and the public fingerprint alone does not independently verify the original locked payload.</p><p className="mt-4">Report generated {formatDate(reveal.generatedAt)}.</p></aside>
@@ -195,7 +197,8 @@ export default function RevealDeck({ result, initialAutoplay, fixture = false }:
         <div className="flex items-center gap-3 text-sm"><Link href={fixture ? "/fixtures" : `/e/${event.slug}`} className="rounded px-2 py-2 text-slate-300 hover:text-white focus-visible:outline-2 focus-visible:outline-emerald-400">{fixture ? "Fixtures" : "Event"}</Link><Link href={reportHref} className="rounded-full border border-white/20 px-4 py-2 hover:border-emerald-300 hover:text-emerald-300 focus-visible:outline-2 focus-visible:outline-emerald-400">Full report ↗</Link></div>
       </header>
       <div className="relative z-10 mx-auto flex w-full max-w-[1600px] flex-1 flex-col px-4 py-6 sm:px-10 sm:py-10 lg:px-16">
-        <div className="mb-6 flex items-center justify-between gap-3 font-mono text-[11px] uppercase tracking-[0.18em] text-slate-300"><span>{fixture ? "Synthetic preview" : "Published result"} / {slides[index].label}</span><span className="shrink-0 tabular-nums">{String(index + 1).padStart(2, "0")} / {String(slides.length).padStart(2, "0")}</span></div>
+        {synthetic && <aside role="note" aria-label="Synthetic demo disclosure" className="mb-6 rounded-2xl border-2 border-amber-300 bg-amber-950/40 p-4 text-sm leading-relaxed text-amber-100"><strong className="block font-semibold">SYNTHETIC / DEMO{fixture ? " · Local fixture" : " · Demo/test event"}</strong><p className="mt-1">{SYNTHETIC_DISCLOSURE}</p><p className="mt-2">{SYNTHETIC_PROOF_DISCLOSURE}</p></aside>}
+        <div className="mb-6 flex items-center justify-between gap-3 font-mono text-[11px] uppercase tracking-[0.18em] text-slate-300"><span>{fixture ? "Synthetic preview" : synthetic ? "SYNTHETIC / DEMO result" : "Published result"} / {slides[index].label}</span><span className="shrink-0 tabular-nums">{String(index + 1).padStart(2, "0")} / {String(slides.length).padStart(2, "0")}</span></div>
         <section aria-label={slides[index].heading} className="flex flex-1 flex-col justify-center py-5 sm:py-10">{slides[index].body}</section>
         <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-white/15 pt-4">
           <p className="sr-only" aria-live="polite">Slide {index + 1} of {slides.length}: {slides[index].heading}</p>

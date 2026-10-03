@@ -36,9 +36,15 @@ Open `http://localhost:3000/fixtures` for the fixture library, report previews, 
 
 Conversion verifies each original SHA-256 hash, normalizes product attributes and voter IDs, recomputes weighted predictions and report metrics using the app's actual calculation functions, and records a distinct adapted hash. The original source hash remains provenance, not proof of a live model call. Placeholder SVGs are not treated as product photos; these fixtures cannot test Gemini shelf detection.
 
+## Optional Supabase demo import
+
+`scripts/import-samples.mjs` validates the complete archive and defaults to a local dry-run. Use `--check-remote` for read-only schema, collision and owner checks. Only an explicit `--apply --owner <confirmed-organizer-uuid>` creates data; it never deletes existing rows, disables guards, or executes the archive's SQL/Python. Pass `--zip <archive>` and `--python <existing-Python-with-Pillow>`. Imported workspaces/events are labelled synthetic; SVG placeholders become labelled JPEGs, and source-only metadata is preserved privately in event settings. Keep the same archive and Pillow version when resuming an interrupted import.
+
+Run importer regressions with `SHELF_ORACLE_SAMPLE_ZIP=<archive> SAMPLE_IMPORT_PYTHON=<python> npm run test:import`.
+
 ## Event flow
 
-1. Sign up and create an event in your personal workspace.
+1. Sign up and create an event in your personal workspace. The organizer login page also offers a QR to open verified sign-in on your phone; it contains only the canonical login URL, never credentials. Email links require an existing account, working mail delivery, and the configured callback URL; open the link in the same browser/device that requested it. Scanning alone does not grant account access.
 2. Upload a shelf photo, review detection boxes and confirm or correct products.
 3. Generate a draft behavioural prediction and lock it. The SHA-256 hash and timestamp are visible before voting.
 4. Share the event's `/e/<slug>/v` QR link. Attendees optionally lock a top-five prediction, then rate products and add comments.

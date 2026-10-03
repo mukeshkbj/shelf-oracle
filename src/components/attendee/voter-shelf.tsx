@@ -4,12 +4,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { voterId } from "@/lib/slug";
+import { isSyntheticEvent, SYNTHETIC_DISCLOSURE } from "@/lib/demo";
 import type { EventStatus, Product } from "@/lib/types";
 
 type ShelfProduct = Pick<Product, "id" | "brand" | "name" | "category" | "format" | "price" | "claims" | "attributes" | "thumb">;
 type OwnVote = { productId: string; rating: number; comment: string | null };
 type PersonalData = { votes: OwnVote[]; guessSubmitted: boolean };
-type PublicStatus = { event: { status: EventStatus } };
+type PublicStatus = { event: { status: EventStatus; synthetic?: boolean } };
 type SaveState = "saving" | "saved" | "error";
 
 function photo(src: string | null): src is string {
@@ -24,7 +25,9 @@ function ProductPhoto({ product, size = "card" }: { product: ShelfProduct; size?
   );
 }
 
-export function VoterShelf({ slug, eventName, initialStatus }: { slug: string; eventName: string; initialStatus: EventStatus }) {
+export function VoterShelf({ slug, eventName, initialStatus, synthetic: initialSynthetic = false }: { slug: string; eventName: string; initialStatus: EventStatus; synthetic?: boolean }) {
+  const [synthetic, setSynthetic] = useState(initialSynthetic);
+  const demo = isSyntheticEvent({ name: eventName, synthetic });
   const [voter, setVoter] = useState<string | null>(null);
   const [storageWarning, setStorageWarning] = useState(false);
   const [status, setStatus] = useState(initialStatus);
@@ -86,6 +89,7 @@ export function VoterShelf({ slug, eventName, initialStatus }: { slug: string; e
         if (!mounted) return;
         lastStatus.current = statusData.event.status;
         setStatus(statusData.event.status);
+        if (typeof statusData.event.synthetic === "boolean") setSynthetic(statusData.event.synthetic);
         setProducts(items);
         setVotes(Object.fromEntries(personal.votes.map((vote) => [vote.productId, vote])));
         setGuessSubmitted(personal.guessSubmitted);
@@ -107,7 +111,9 @@ export function VoterShelf({ slug, eventName, initialStatus }: { slug: string; e
       try {
         const res = await fetch(`/api/e/${encodeURIComponent(slug)}/status`, { cache: "no-store" });
         if (res.ok) {
-          const nextStatus = (await res.json() as PublicStatus).event.status;
+          const nextEvent = (await res.json() as PublicStatus).event;
+          const nextStatus = nextEvent.status;
+          if (typeof nextEvent.synthetic === "boolean") setSynthetic(nextEvent.synthetic);
           if (nextStatus === "voting" && lastStatus.current !== "voting") {
             const shelf = await fetch(`/api/e/${encodeURIComponent(slug)}/products`, { cache: "no-store" });
             if (!shelf.ok) return;
@@ -249,6 +255,7 @@ export function VoterShelf({ slug, eventName, initialStatus }: { slug: string; e
           <Link href={`/e/${encodeURIComponent(slug)}`} className="inline-flex min-h-11 items-center font-semibold text-slate-700 underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-emerald-600">← {eventName}</Link>
           <Link href={`/e/${encodeURIComponent(slug)}/me`} className="inline-flex min-h-11 items-center rounded-xl border border-slate-300 px-4 font-medium hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-emerald-600">My taste profile →</Link>
         </nav>
+        {demo && <aside role="note" aria-label="Synthetic demo disclosure" className="mt-6 rounded-2xl border-2 border-amber-400 bg-amber-50 p-4 text-sm leading-relaxed text-amber-950"><strong className="block font-semibold">SYNTHETIC / DEMO · Demo/test event</strong><p className="mt-1">{SYNTHETIC_DISCLOSURE}</p></aside>}
         <header className="mt-7">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Shelf Oracle · Your tasting</p>
           <h1 className="mt-2 text-4xl font-semibold tracking-tight sm:text-5xl">Build your shelf.</h1>
@@ -332,6 +339,7 @@ export function VoterShelf({ slug, eventName, initialStatus }: { slug: string; e
       </div>
       {active && <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60" onMouseDown={(event) => { if (event.target === event.currentTarget) closeSheet(); }}>
         <div ref={dialog} role="dialog" aria-modal="true" aria-labelledby="sheet-title" tabIndex={-1} className="max-h-[90dvh] w-full max-w-2xl overflow-y-auto rounded-t-3xl bg-white p-5 pb-9 shadow-2xl outline-none sm:rounded-3xl sm:p-8">
+          {demo && <p role="note" className="mb-4 rounded-xl border border-amber-400 bg-amber-50 p-3 text-sm text-amber-950"><strong>SYNTHETIC / DEMO.</strong> {SYNTHETIC_DISCLOSURE}</p>}
           <div className="flex items-center justify-between gap-4"><p className="text-xs font-semibold uppercase tracking-widest text-emerald-700">Your tasting notes</p><button id="close-rating-sheet" type="button" onClick={closeSheet} aria-label="Close product details" className="flex min-h-11 min-w-11 items-center justify-center rounded-full border border-slate-300 text-2xl hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-emerald-600">×</button></div>
           <div className="mt-3 flex gap-5"><ProductPhoto product={active} size="sheet" /><div><p className="text-sm font-semibold text-emerald-700">{active.brand}</p><h2 id="sheet-title" className="mt-1 text-xl font-semibold">{active.name}</h2>{active.category && <p className="mt-2 text-sm text-slate-500">{active.category}</p>}{active.format && <p className="mt-1 text-sm text-slate-500">{active.format}</p>}{active.price && <p className="mt-2 font-medium">{active.price}</p>}</div></div>
           {active.claims?.length > 0 && <div className="mt-5 flex flex-wrap gap-2">{active.claims.map((claim, index) => <span key={`${claim}-${index}`} className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs text-emerald-800">{claim}</span>)}</div>}

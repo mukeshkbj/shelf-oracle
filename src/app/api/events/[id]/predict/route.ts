@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import OpenAI from "openai";
 import { scoreProducts } from "@/lib/ai";
 import { AuthError, ForbiddenError, requireEventMember, requireUser } from "@/lib/auth";
 import { weightedScore } from "@/lib/metrics";
@@ -65,6 +66,14 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     if (e instanceof ForbiddenError) return NextResponse.json({ error: e.message }, { status: 403 });
+    const providerStatus = e instanceof OpenAI.APIError ? e.status : undefined;
+    const code = providerStatus === 429 ? "AI_QUOTA_EXCEEDED" : "PREDICTION_FAILED";
+    console.error("Prediction failed", { code, providerStatus });
+    if (providerStatus === 429)
+      return NextResponse.json({
+        code,
+        error: "Gemini rate limit or quota reached. Wait for the limit to reset before predicting again; an exhausted daily free-tier quota must wait for its daily reset. Check usage in Google AI Studio.",
+      }, { status: 429, headers: { "Cache-Control": "no-store" } });
     return NextResponse.json({ error: "Prediction failed; please retry" }, { status: 502 });
   }
 }

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { TasteProfile } from "@/components/attendee/taste-profile";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { isSyntheticEvent } from "@/lib/demo";
 
 export const dynamic = "force-dynamic";
 
@@ -11,11 +12,11 @@ export default async function MyTastePage({ params }: Props) {
   if (!/^[a-z0-9-]{1,64}$/.test(slug)) notFound();
   const { data, error } = await supabaseAdmin()
     .from("events")
-    .select("name")
+    .select("name,settings")
     .eq("slug", slug)
     .maybeSingle();
   if (error) throw new Error("Unable to load event");
   if (!data) notFound();
 
-  return <TasteProfile slug={slug} eventName={data.name as string} />;
+  return <TasteProfile slug={slug} eventName={data.name as string} synthetic={isSyntheticEvent(data)} />;
 }
